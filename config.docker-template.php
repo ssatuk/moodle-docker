@@ -13,24 +13,45 @@ $CFG->dbpass    = getenv('MOODLE_DOCKER_DBPASS');
 $CFG->prefix    = 'm_';
 $CFG->dboptions = ['dbcollation' => getenv('MOODLE_DOCKER_DBCOLLATION')];
 
-$host = 'localhost';
-if (!empty(getenv('MOODLE_DOCKER_WEB_HOST'))) {
-    $host = getenv('MOODLE_DOCKER_WEB_HOST');
+if (getenv('MOODLE_DOCKER_DBTYPE') === 'sqlsrv') {
+    $CFG->dboptions['extrainfo'] = [
+        // Disable Encryption for now on sqlsrv.
+        // It is on by default from msodbcsql18.
+        'Encrypt' => false,
+    ];
 }
-$CFG->wwwroot   = "http://{$host}";
-$port = getenv('MOODLE_DOCKER_WEB_PORT');
-if (!empty($port)) {
-    // Extract port in case the format is bind_ip:port.
-    $parts = explode(':', $port);
-    $port = end($parts);
-    if ((string)(int)$port === (string)$port) { // Only if it's int value.
-        $CFG->wwwroot .= ":{$port}";
+
+if (empty($_SERVER['HTTP_HOST'])) {
+    $_SERVER['HTTP_HOST'] = 'localhost';
+}
+if (strpos($_SERVER['HTTP_HOST'], '.gitpod.io') !== false) {
+    // Gitpod.io deployment.
+    $CFG->wwwroot   = 'https://' . $_SERVER['HTTP_HOST'];
+    $CFG->sslproxy = true;
+    // To avoid registration form.
+    $CFG->site_is_public = false;
+} else {
+    // Docker deployment.
+    $host = 'localhost';
+    if (!empty(getenv('MOODLE_DOCKER_WEB_HOST'))) {
+        $host = getenv('MOODLE_DOCKER_WEB_HOST');
+    }
+    $CFG->wwwroot   = "http://{$host}";
+    $port = getenv('MOODLE_DOCKER_WEB_PORT');
+    if (!empty($port)) {
+        // Extract port in case the format is bind_ip:port.
+        $parts = explode(':', $port);
+        $port = end($parts);
+        if ((string)(int)$port === (string)$port) { // Only if it's int value.
+            $CFG->wwwroot .= ":{$port}";
+        }
     }
 }
+
 $CFG->dataroot  = '/var/www/moodledata';
 $CFG->admin     = 'admin';
 $CFG->directorypermissions = 0777;
-$CFG->smtphosts = 'mailhog:1025';
+$CFG->smtphosts = 'mailpit:1025';
 $CFG->noreplyaddress = 'noreply@example.com';
 
 // Debug options - possible to be controlled by flag in future..
@@ -95,6 +116,20 @@ if (getenv('MOODLE_DOCKER_PHPUNIT_EXTRAS')) {
     define('TEST_ENROL_LDAP_BIND_DN', 'cn=admin,dc=openstack,dc=org');
     define('TEST_ENROL_LDAP_BIND_PW', 'password');
     define('TEST_ENROL_LDAP_DOMAIN', 'ou=Users,dc=openstack,dc=org');
+}
+
+if (property_exists($CFG, 'behat_wwwroot')) {
+    $mockhash = sha1($CFG->behat_wwwroot);
+} else {
+    $mockhash = sha1($CFG->wwwroot);
+}
+
+if (getenv('MOODLE_DOCKER_BBB_MOCK')) {
+    define('TEST_MOD_BIGBLUEBUTTONBN_MOCK_SERVER', "http://bbbmock/{$mockhash}");
+}
+
+if (getenv('MOODLE_DOCKER_MATRIX_MOCK')) {
+    define('TEST_COMMUNICATION_MATRIX_MOCK_SERVER', "http://matrixmock/{$mockhash}");
 }
 
 require_once(__DIR__ . '/lib/setup.php');
