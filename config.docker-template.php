@@ -80,13 +80,20 @@ $CFG->behat_profiles = array(
     ),
 );
 $CFG->behat_faildump_path = '/var/www/behatfaildumps';
+$CFG->behat_increasetimeout = getenv('MOODLE_DOCKER_TIMEOUT_FACTOR');
 
 define('PHPUNIT_LONGTEST', true);
 
 if (getenv('MOODLE_DOCKER_APP')) {
     $appport = getenv('MOODLE_DOCKER_APP_PORT') ?: 8100;
+    $protocol = getenv('MOODLE_DOCKER_APP_PROTOCOL') ?: 'https';
 
-    $CFG->behat_ionic_wwwroot = "http://moodleapp:$appport";
+    $CFG->behat_ionic_wwwroot = "$protocol://moodleapp:$appport";
+    $CFG->behat_profiles['default']['capabilities'] = [
+        'extra_capabilities' => [
+            'chromeOptions' => ['args' => ['--ignore-certificate-errors', '--allow-running-insecure-content']],
+        ],
+    ];
 }
 
 if (getenv('MOODLE_DOCKER_PHPUNIT_EXTRAS')) {
