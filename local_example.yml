@@ -1,0 +1,17 @@
+version: "2"
+services:
+  pgadmin:
+    image: dpage/pgadmin4:6.17
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: UPDATE_PGADMINEMAIL
+      PGADMIN_DEFAULT_PASSWORD:  UPDATE_PGADMINPWD
+      PGADMIN_LISTEN_PORT: 80
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    ports:
+      - "8090:80/tcp"
+    volumes:
+      - "pgadmin-data:/var/lib/pgadmin"
+    
+volumes:
+  pgadmin-data:
